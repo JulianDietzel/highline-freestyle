@@ -119,23 +119,27 @@ const TrickDetails = () => {
     <div className="trick-details">
       {trick && (
         <article>
-          <div className="row align-items-center justify-content-between">
-            <h2 className="col-8 col-sm-9 col-md-10" align="left">{trick.alias || trick.technicalName}</h2>
+          <div className="mt-2 mb-4 py-0">
+            <div className="row align-items-start justify-content-between my-0">
+              <div className="col-8 col-sm-9 col-md-10">
+                <h1 className="fw-bold my-0" align="left">
+                  {trick.alias || trick.technicalName}
+                </h1>
+                {trick.alias && trick.technicalName &&
+                    <h2 className="text-muted fs-3 mb-0 mt-1">{trick.technicalName}</h2>
+                }
+              </div>
 
-            <div className="col-2 col-sm-2 col-md-1" align="center">
-              <EditButton call={editTrick}/>
+              <div className="col-2 col-sm-2 col-md-1 my-0" align="center">
+                <EditButton className="align-top" call={editTrick}/>
+              </div>
+
+              <div className="col-2 col-sm-1 col-md-1 my-0" align="right">
+                <DeleteButton setShowDeleteWarning={setShowDeleteWarning}/>
+              </div>
             </div>
 
-            <div className="col-2 col-sm-1 col-md-1" align="right">
-              <DeleteButton setShowDeleteWarning={setShowDeleteWarning}/>
-            </div>
           </div>
-          {trick.alias && trick.technicalName &&
-            <div>
-              <h3>Technical Name: </h3>
-              <div className="callout">{trick.technicalName}</div>
-            </div>
-          }
 
           {trick.startPos && trick.endPos &&
             <div>
