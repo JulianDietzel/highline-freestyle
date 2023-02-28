@@ -120,13 +120,13 @@ const TrickDetails = () => {
       {trick && (
         <article>
           <div className="row align-items-center justify-content-between">
-            <h2 className="col-6" align="left">{trick.alias || trick.technicalName}</h2>
+            <h2 className="col-8 col-sm-9 col-md-10" align="left">{trick.alias || trick.technicalName}</h2>
 
-            <div className="col-3" align="center">
+            <div className="col-2 col-sm-2 col-md-1" align="center">
               <EditButton call={editTrick}/>
             </div>
 
-            <div className="col-3" align="right">
+            <div className="col-2 col-sm-1 col-md-1" align="right">
               <DeleteButton setShowDeleteWarning={setShowDeleteWarning}/>
             </div>
           </div>
@@ -211,7 +211,14 @@ const TrickDetails = () => {
           </div>
 
           <div className="boostSkill row justify-content-center">
-            <button className={trick.boostSkill ? "col-8 col-lg-3 col-xl-2 btn btn-warning" : "col-8 col-lg-3 col-xl-2 btn btn-primary" } onClick={toggleBoostSkill}>{trick.boostSkill ? "Unboost this trick" : (<><IoRocketSharp/> Boost this trick</>)}</button>
+            <button
+                className={trick.boostSkill ? "col-8 col-lg-3 col-xl-2 btn btn-warning" : "col-8 col-lg-3 col-xl-2 btn btn-primary" }
+                onClick={toggleBoostSkill}>
+              {trick.boostSkill
+                  ? "Unboost"
+                  : <><IoRocketSharp style={{fill: "white"}}/> Boost</>
+              }
+            </button>
           </div>
 
           {showDeleteWarning && <DeleteWarning showDeleteWarning={showDeleteWarning} setShowDeleteWarning={setShowDeleteWarning} itemName={trick.alias || trick.technicalName} call={deleteTrick} />}
