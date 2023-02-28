@@ -35,7 +35,6 @@ const TrickDetails = () => {
     return dbTrick;
   }, [id]);
 
-  if (!trick) return null;
 
   console.log(trick);
 
@@ -115,11 +114,35 @@ const TrickDetails = () => {
     });
   }
 
+  /**
+   * Determine the color for the difficultyLevel badge. This is done by lerping between two colors.
+   */
+  const difficultyBadgeColor = useLiveQuery(async () => {
+    const dbTrick = await db.getTrick(id);
+
+    const difficulties = (await db.getAllTricks()).map(trick => trick.difficultyLevel)
+    const minDifficulty = Math.min(...difficulties)
+    const maxDifficulty = Math.max(...difficulties)
+    const minColor = [194, 80, 40]  //HSL
+    const maxColor = [0, 100, 40]   //HSL
+
+    const clampedDifficulty = Math.max(minDifficulty, Math.min(dbTrick.difficultyLevel, maxDifficulty))
+    const percent = (clampedDifficulty - minDifficulty) / (maxDifficulty - minDifficulty)
+
+    const color = []
+    for (let i = 0; i < 3; i++) {
+      color.push(Math.floor(minColor[i] * (1 - percent) + maxColor[i] * percent))
+    }
+    return `hsl(${color[0]}deg ${color[1]}% ${color[2]}%)`
+  }, [id], "#666666")
+
+  if (!trick) return null;
+
   return (
-    <div className="trick-details">
+    <div className="trick-details container-lg px-1">
       {trick && (
         <article>
-          <div className="mt-2 mb-4 py-0">
+          <div className="mt-2 mb-3 py-0">
             <div className="row align-items-start justify-content-between my-0">
               <div className="col-8 col-sm-9 col-md-10">
                 <h1 className="fw-bold my-0" align="left">
@@ -138,77 +161,80 @@ const TrickDetails = () => {
                 <DeleteButton setShowDeleteWarning={setShowDeleteWarning}/>
               </div>
             </div>
-
           </div>
 
-          {trick.startPos && trick.endPos &&
-            <div>
-              <div className="callout">from {trick.startPos} to {trick.endPos}</div>
-            </div>
-          }
+          <div className="row justify-content-start">
+            {trick.startPos && trick.endPos &&
+                <div className="col-auto mt-0 mb-3 me-4">from {trick.startPos} to {trick.endPos}</div>
+            }
+            {(trick.difficultyLevel >= 0) &&
+                <div className="col-auto" align="left">
+                  <p className="badge" style={{background: difficultyBadgeColor}}>
+                    <Trans id="trickDetails.level">Difficulty</Trans> {trick.difficultyLevel}
+                  </p>
+                </div>
+            }
+          </div>
 
-          {(trick.difficultyLevel >= 0) &&
-            <div>
-              <h3><Trans id="trickDetails.level">Level</Trans>: </h3>
-              <div className="callout">{trick.difficultyLevel}</div>
-            </div>
-          }
+          <hr className="my-1"/>
 
           {trick.description &&
-            <div>
-              <h3>Description: </h3>
-              <div className="callout">{trick.description}</div>
-            </div>
-          }
-
-          {trick.tips &&
-            <div>
-              <h3>Tips: </h3>
-              <div className="callout">{trick.tips}</div>
-            </div>
+              <div className="my-3">{trick.description}</div>
           }
 
           {trick.yearEstablished && trick.establishedBy &&
-            <div>
-              <h3>Established by: </h3>
-              <div className="callout">{trick.establishedBy} in {trick.yearEstablished}</div>
-            </div>
+              <p className="">Established by {trick.establishedBy} in {trick.yearEstablished}</p>
           }
 
           {youtubeId &&
-            <div className="callout video-callout">
+            <div className="ratio ratio-16x9">
               <YouTube className="video" videoId={youtubeId} opts={youtubeOpts} onReady={setupYoutubePlayer} onEnd={restartVideo}/>
             </div>
           }
           {instagramLink &&
-            <div className="callout insta-callout">
+            <div align="center">
               <iframe className="insta-video" src={instagramLink} frameBorder="0" scrolling="no" allowtransparency="true" title="video"></iframe>
             </div>
           }
 
-          {trick.recommendedPrerequisites.length !== 0 &&
-            <div className="row">
-              <h4>Recommended Prerequisites:</h4>
-              {trick.recommendedPrerequisites.map(recommendedTrick => {
-              if(recommendedTrick){
-                return (
-                    <div key={recommendedTrick.id} className="trick-container col-12">
-                      <button className="btn trick-preview skillFreq" freq={recommendedTrick.stickFrequency} onClick={() => {navigate(`/tricks/${recommendedTrick.id}`);}}>
-                        {recommendedTrick.alias || recommendedTrick.technicalName}
-                        {recommendedTrick.boostSkill && (
-                          <>
-                          <br/>
-                          <IoRocketSharp />
-                          </>)}
-                      </button>
-                    </div>
-                );
-              }})}
-            </div>
+          {(trick.tips || trick.recommendedPrerequisites.length !== 0) &&
+            <hr className="my-3"/>
           }
 
+          {trick.tips &&
+              <div>
+                <h5 className="text-muted">Tips</h5>
+                <div className="">{trick.tips}</div>
+              </div>
+          }
+
+          {trick.recommendedPrerequisites.length !== 0 &&
+              <div className={trick.tips ? "mt-3" : ""}>
+                <div className="row">
+                  <h5 className="text-muted">Recommended Prerequisites</h5>
+                  {trick.recommendedPrerequisites.map(recommendedTrick => {
+                  if(recommendedTrick){
+                    return (
+                        <div key={recommendedTrick.id} className="trick-container col-12">
+                          <button className="btn trick-preview skillFreq" freq={recommendedTrick.stickFrequency} onClick={() => {navigate(`/tricks/${recommendedTrick.id}`);}}>
+                            {recommendedTrick.alias || recommendedTrick.technicalName}
+                            {recommendedTrick.boostSkill && (
+                              <>
+                              <br/>
+                              <IoRocketSharp />
+                              </>)}
+                          </button>
+                        </div>
+                    );
+                  }})}
+                </div>
+              </div>
+          }
+
+          <hr className="my-3"/>
+
           <div className="row">
-            <h4>Set your success frequency:</h4>
+            <h5 className="text-muted">Your success frequency:</h5>
             <div onChange={selectFreq}>
               <FreqList stickable={trick}/>
             </div>
