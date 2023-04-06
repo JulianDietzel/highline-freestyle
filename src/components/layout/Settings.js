@@ -1,24 +1,22 @@
-import { Menu, MenuItem, MenuButton, SubMenu, MenuRadioGroup, MenuDivider, MenuHeader } from '@szhsin/react-menu';
+import { Menu, MenuItem, SubMenu, MenuDivider } from '@szhsin/react-menu';
 import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
 import { BsGearFill } from 'react-icons/bs';
 import { useLocation } from 'react-router-dom';
-import { trickSortingSchemes, comboSortingSchemes } from '../../services/sortingSchemes';
-import { useLingui } from "@lingui/react"
 import LanguageSelector from "../buttons/LanguageSelector"
 import { useNavigate } from 'react-router';
 
 import Database from "../../services/db";
 const db = new Database();
 
-const Settings = ({ sortOpt, setSortOpt, setShowAboutPage, setShowResetWarning }) => {
+const Settings = ({ setShowAboutPage, setShowResetWarning }) => {
 
   const navigate = useNavigate();
 
   const path = useLocation().pathname.toString().toLowerCase();
 
-  const inTrickList = path === "/" ? true : false;
-  const inComboList = path === "/combos" ? true : false;
+  const inTrickList = path === "/";
+  const inComboList = path === "/combos";
 
   const selectImportFile = (e) => {
     const fileReader = new FileReader();
@@ -33,17 +31,6 @@ const Settings = ({ sortOpt, setSortOpt, setShowAboutPage, setShowResetWarning }
 
   return (
     <Menu menuButton={<button className="btn btn-secondary btn-outline-secondary"><BsGearFill/></button>} transition>
-    {(inTrickList || inComboList) &&
-      <>
-      <MenuHeader>Sorting</MenuHeader>
-      <MenuRadioGroup value={sortOpt} onRadioChange={e => setSortOpt(e.value)}>
-        {inTrickList && trickSortingSchemes.map(scheme => <MenuItem value={scheme.id} key={"scheme" + scheme.id} >{scheme.name}</MenuItem>)}
-        {inComboList && comboSortingSchemes.map(scheme => <MenuItem value={scheme.id} key={"scheme" + scheme.id} >{scheme.name}</MenuItem>)}
-      </MenuRadioGroup>
-      <MenuDivider />
-      </>
-    }
-
       <MenuItem onClick={() => setShowResetWarning("tricks")} >Reset all tricks</MenuItem>
       <MenuItem onClick={() => setShowResetWarning("combos")} >Reset all combos</MenuItem>
 
@@ -59,7 +46,7 @@ const Settings = ({ sortOpt, setSortOpt, setShowAboutPage, setShowResetWarning }
       <MenuItem><LanguageSelector /></MenuItem>
 
       <MenuDivider />
-
+      <MenuItem onClick={() => self.open("https://forms.gle/Kg1Kydh8tqG4f7Vv8")} >Propose new trick</MenuItem>
       <MenuItem onClick={() => setShowAboutPage(true)} >About</MenuItem>
     </Menu>
   );

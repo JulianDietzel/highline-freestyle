@@ -1,13 +1,17 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from "dexie-react-hooks";
-import { comboSortingSchemes as sortingSchemes } from '../../services/sortingSchemes';
+import { comboSortingSchemes } from '../../services/sortingSchemes';
 import { IoRocketSharp } from 'react-icons/io5';
+import Fuse from 'fuse.js';
+import SearchBar from '../misc/SearchBar';
 
 import Database from "../../services/db";
 const db = new Database();
 
-const ComboList = ({ sortOpt, scrollPosition, setScrollPosition }) => {
+const ComboList = ({ scrollPosition, setScrollPosition }) => {
+  const [sortOpt, setSortOpt] = useState(0);
+  const [searchPattern, setSearchPattern] = useState("");
 
   useEffect(() => {
     document.getElementById("content").scrollTo({
@@ -17,12 +21,20 @@ const ComboList = ({ sortOpt, scrollPosition, setScrollPosition }) => {
     });
   });
 
-  // combos query with react hooks -- means it refreshes automaticly
-  const combos = useLiveQuery(() => db.getAllCombos().then(c => c.sort(sortingSchemes[sortOpt].sortFunc)), [sortOpt]);
+  async function combosFromDBSorted(sortingOption) {
+    const allCombos = await db.getAllCombos();
+    return allCombos.sort(comboSortingSchemes[sortingOption].sortFunc);
+  }
+
+  // combos query with react hooks -- means it refreshes automatically
+  const combos = useLiveQuery(() => combosFromDBSorted(sortOpt), [sortOpt]);
   if (!combos || combos.length == 0) {
     return <p>You have no saved combos. For now it is only possible to create a combo using the combo generator, we are working on supporting custom combos.</p>;
   }
-  console.log(combos)
+
+  const searchOptions = { keys: ["name", "establishedBy"] };
+  const fuse = new Fuse(combos, searchOptions);
+  const searchResults = searchPattern ? fuse.search(searchPattern).map(i => i.item) : combos;
 
   const updateScrollPosition = () => {
     setScrollPosition(document.getElementById("content").scrollTop);
@@ -32,8 +44,8 @@ const ComboList = ({ sortOpt, scrollPosition, setScrollPosition }) => {
     return (
       <div key={combo.id} className="combo-container col-4 col-lg-3 col-xl-2">
         <Link className="link-to-combo " to={`/combos/${combo.id}`} key={"combo" + combo.id} >
-          <button className=" btn btn-outline-success combo-preview skillFreq" freq={combo.stickFrequency} onClick={updateScrollPosition}>
-            <h3>{combo.name}</h3>
+          <button className=" btn preview-item skillFreq" freq={combo.stickFrequency} onClick={updateScrollPosition}>
+            {combo.name}
             {combo.boostSkill && (
               <>
               <IoRocketSharp />
@@ -46,26 +58,32 @@ const ComboList = ({ sortOpt, scrollPosition, setScrollPosition }) => {
   let current;
 
   return (
-    <div className="justify-content-evenly">
-      <div className="row">
-        {combos.map(combo => {
-          let isFirst = (sortingSchemes[sortOpt].attributeFunc(combo) !== current);
-          current = sortingSchemes[sortOpt].attributeFunc(combo);
+    <div className="row">
+      <SearchBar
+        sortingSchema={comboSortingSchemes}
+        dropdownHeader="Sort combos"
+        searchPattern={searchPattern}
+        onFilter={value => setSearchPattern(value)}
+        onSort={schemeId => setSortOpt(schemeId)} />
+      {searchResults.map(combo => {
+        const isFirst = (comboSortingSchemes[sortOpt].attributeFunc(combo) !== current);
+        current = comboSortingSchemes[sortOpt].attributeFunc(combo);
+        const catName = comboSortingSchemes[sortOpt].catName;
+        const attributeLast = comboSortingSchemes[sortOpt].attributeLast
 
-          if (isFirst && sortingSchemes[sortOpt].showCategory) {
-            return [
-              <div className="w-100 list-br-heading" key={"header" + combo.id.toString()}>
-                <h4>{!sortingSchemes[sortOpt].attributeLast && current} {sortingSchemes[sortOpt].catName} {sortingSchemes[sortOpt].attributeLast && current}</h4>
-              </div>,
-              getComboDiv(combo)
-            ];
-          } else {
-            return (
-              getComboDiv(combo)
-            );
-          }
-        })}
-      </div>
+        if (isFirst && comboSortingSchemes[sortOpt].showCategory && !searchPattern) {
+          return [
+            <div className="w-100 list-br-heading" key={"header" + combo.id.toString()}>
+              <h4>{!attributeLast && current} {catName} {attributeLast && current}</h4>
+            </div>,
+            getComboDiv(combo)
+          ];
+        } else {
+          return (
+            getComboDiv(combo)
+          );
+        }
+      })}
     </div>
   );
 }

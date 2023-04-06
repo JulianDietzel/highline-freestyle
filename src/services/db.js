@@ -51,6 +51,22 @@ export default class Database {
       });
     });
 
+    this.db.version(8).stores({
+      predefinedTricks: "id,alias,technicalName,establishedBy,yearEstablished,linkToVideo,videoStartTime,videoEndTime,startPos,endPos,difficultyLevel,description,stickFrequency,*recommendedPrerequisites,boostSkill",
+      userTricks: "++id,alias,technicalName,establishedBy,yearEstablished,linkToVideo,videoStartTime,videoEndTime,startPos,endPos,difficultyLevel,description,stickFrequency,*recommendedPrerequisites,deleted,boostSkill",
+    }).upgrade(async tx => {
+      await tx.table("predefinedTricks").toCollection().modify(trick => {
+        if (!Array.isArray(trick.tips)) {
+          trick.tips = trick.tips ? trick.tips.split(";") : [];
+        }
+      });
+      await tx.table("userTricks").toCollection().modify(trick => {
+        if (!Array.isArray(trick.tips)) {
+          trick.tips = trick.tips ? trick.tips.split(";") : [];
+        }
+      });
+    });
+
     this.db.on('ready', () => {
       // count the tricks in the database and populate it if its empty
       return this.db.versions.get("predefinedTricksVersion").then(ret => {
@@ -82,40 +98,28 @@ export default class Database {
     return this.db.userTricks.clear();
   };
 
-  // populate the databes with tricks from the predefinedTricks.js
-  populateTricks = () => {
-    return this.db.predefinedTricks.clear().then(() => {
-      console.log("updating predefinedTricks")
-      const trickList = Papa.parse(predefinedTricks, {dynamicTyping: true}).data;
+  /**
+   * Populate the database with the trick of the predefinedTricks.js file.
+   * @returns {Promise<void>}
+   */
+  populateTricks = async () => {
+    await this.db.predefinedTricks.clear();
 
-      // this uses the labels of the csv but, also adds an id
-      const header = trickList.shift().concat(["stickFrequency"]);
+    const trickList = Papa.parse(predefinedTricks, {dynamicTyping: true}).data;
 
-      const tricks = trickList.map(trick => {
-        // add 0 for stickFrequency
-        trick.push(0);
-        // make key value pairs
-        return Object.assign.apply({},
-          header.map((v,i) => {
-            return ({[v]: trick[i]})
-          })
-      );});
-
-      //this turns the list of recommendedPrerequisites (which are separated by an ;) into an Array
-      tricks.map(trick => {
-        if (typeof trick.recommendedPrerequisites === "string") {
-          trick.recommendedPrerequisites = trick.recommendedPrerequisites.split(";").map(string => Number(string));
-        } else if (typeof trick.recommendedPrerequisites === "number") {
-          trick.recommendedPrerequisites = [trick.recommendedPrerequisites];
-        }
-      });
-
-      // adds the tricks to the database
-      return this.db.predefinedTricks.bulkPut(tricks).then(() => {
-        console.log("added tricks to database from the csv");
-        this.db.versions.put({"key": "predefinedTricksVersion", "version": predefinedTricksVersion});
-      });
+    const header = trickList.shift();
+    const tricks = trickList.map(trick => {
+      return Object.assign.apply({}, header.map((v, i) => ({[v]: trick[i]})));
     });
+
+    for(const trick of tricks) {
+      trick.stickFrequency = 0;
+      trick.recommendedPrerequisites = normalizeTrickPrerequisites(trick.recommendedPrerequisites);
+      trick.tips = trick.tips ? trick.tips.split(";") : [];
+    }
+
+    await this.db.predefinedTricks.bulkPut(tricks);
+    await this.db.versions.put({"key": "predefinedTricksVersion", "version": predefinedTricksVersion});
   };
 
   // helper function to combine two lists, 
@@ -147,33 +151,43 @@ export default class Database {
   // get single trick by id
   getTrick = (id) => this.db.userTricks.get(Number(id)).then(userTrick => {
       return this.db.predefinedTricks.get(Number(id)).then(preTrick => {
-        if (!userTrick) return preTrick;
-        else return this.mergeLists([userTrick], [preTrick])[0];
+        // overwrite all user set attributes
+        return {...preTrick, ...userTrick};
       });
     });
 
-  // get list of all tricks
-  //
-  // we combine all Tricks from both of the Tables, by their ids
-  // if an attribute is set by both tables, we take the attribute of the userTricks
-  getAllTricks = () => {
-    return this.db.userTricks.toArray().then((userTricks) => {
-      return this.db.predefinedTricks.toArray().then(preTricks => {
-        return this.mergeLists(userTricks, preTricks)
-            .filter(trick => !trick.deleted)
-            .sort((a,b) => a.id - b.id);
-        });
-    });
+  /**
+   * Get a list of all tricks. All Tricks from both of the tables are combined by their ids. If an entry exists in
+   * both tables, the one from the userTricks table is used.
+   */
+  getAllTricks = async () => {
+    const[userTricks, preTricks] = await Promise.all([
+      await this.db.userTricks.toArray(),
+      await this.db.predefinedTricks.toArray(),
+    ]);
+    return this.mergeLists(userTricks, preTricks)
+        .filter(trick => !trick.deleted)
+        .sort((a,b) => a.id - b.id);
   };
 
-  // get list of tricks from ids
-  getTricksByIds = (ids) => {
-    ids = ids.map(id => Number(id));
-    return this.db.userTricks.where("id").anyOf(ids).toArray().then(userTricks => {
-      return this.db.predefinedTricks.where("id").anyOf(ids).toArray().then(preTricks => {
-        return this.mergeLists(userTricks, preTricks);
-      });
-    });
+  /**
+   * Provided a list of trick ids, a list of tricks is returned which has the same number of elements and the same order
+   * as the original list.
+   */
+  getTricksByIds = async (ids) => {
+    const allTrickInfo = await this.getAllTricks()
+    const allTrickLookup = {}
+    allTrickInfo.forEach(e => allTrickLookup[e.id] = e)
+
+    const tricks = []
+    for (let i = 0; i < ids.length; i++) {
+      if (Object.keys(allTrickLookup).includes("" + ids[i])) {
+        tricks.push(allTrickLookup[ids[i]])
+      } else {
+        throw new Error(`Id '${ids[i]}' not in database.`)
+      }
+    }
+    return tricks
   };
 
 
@@ -264,13 +278,12 @@ export default class Database {
     })
     .then(combo => this.fillComboWithTricks(combo));
 
-  // fill a combo, which has only ids as tricks with the full tricks
-  // (containing id, name, level, etc.)
-  fillComboWithTricks = (combo) => {
-    return this.getTricksByIds(combo.tricks).then(tricksInCombo => {
-      combo.tricks = tricksInCombo;
-      return combo;
-    });
+  /**
+   * Fill a combo, which has only ids as tricks with the full tricks (containing id, name, level, etc.)
+   */
+  fillComboWithTricks = async (combo) => {
+    combo.tricks = await this.getTricksByIds(combo.tricks)
+    return combo;
   };
 
   // get list of all combos
@@ -358,4 +371,22 @@ export default class Database {
     });
   };
 
+}
+
+/**
+ * Takes the recommended prerequisites of a trick as either a number or a semicolon separated string and returns it
+ * / them as an array of numbers (ids). If the prerequisites are of any other type, they are simply returned as they
+ * are. If undefined or null is passed, an empty array is returned.
+ */
+function normalizeTrickPrerequisites(prerequisites) {
+  if (!prerequisites) {
+    return [];
+  }
+  if (typeof prerequisites === "string") {
+    return prerequisites.split(";").map(string => Number(string));
+  }
+  if (typeof prerequisites === "number") {
+    return [prerequisites];
+  }
+  return prerequisites;
 }

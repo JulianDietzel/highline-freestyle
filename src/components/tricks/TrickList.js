@@ -3,27 +3,28 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from "dexie-react-hooks";
 import { trickSortingSchemes as sortingSchemes } from '../../services/sortingSchemes';
 import computeStats from '../../logic/combos/computeStats';
-import { IoRocketSharp } from 'react-icons/io5';
+import { IoRocketSharp, IoSearchSharp } from 'react-icons/io5';
 import Fuse from 'fuse.js';
+import { trickSortingSchemes } from '../../services/sortingSchemes';
+import SearchBar from "../misc/SearchBar"
 
 import Database from "../../services/db";
 const db = new Database();
 
-const TrickList = ({ sortOpt, scrollPosition, setScrollPosition, userCombo, setUserCombo }) => {
+const TrickList = ({ scrollPosition, setScrollPosition, userCombo, setUserCombo }) => {
+  const [sortOpt, setSortOpt] = useState(0);
+  const [searchPattern, setSearchPattern] = useState("");
 
   const location = useLocation();
   const navigate = useNavigate();
 
   let addTrickToCombo = false;
 
-  if (location.state) {
-    if (location.state.addTrickToCombo) {
-      addTrickToCombo = true;
-    }
+  if (location.state && location.state.addTrickToCombo) {
+    addTrickToCombo = true;
   }
 
   let current;
-  const [searchPattern, setSearchPattern] = useState("");
   const options = {
     keys: ['alias', 'technicalName']
   }
@@ -88,7 +89,7 @@ const TrickList = ({ sortOpt, scrollPosition, setScrollPosition, userCombo, setU
   function getTrickDiv(trick) {
     return (
       <div key={trick.id} className="trick-container col-4 col-lg-3 col-xl-2">
-          <button className=" btn trick-preview skillFreq" freq={trick.stickFrequency} onClick={() => onClickTrick(trick)}>
+          <button className=" btn preview-item skillFreq" freq={trick.stickFrequency} onClick={() => onClickTrick(trick)}>
             {trick.alias || trick.technicalName}
             {trick.boostSkill && (
               <>
@@ -110,13 +111,12 @@ const TrickList = ({ sortOpt, scrollPosition, setScrollPosition, userCombo, setU
   return (
     <div className="row">
       {addTrickToCombo && <h2 style={{'fontWeight': 'bold'}}>Add trick to combo</h2>}
-      <input
-        className="form-control"
-        type="search"
-        value={searchPattern}
-        placeholder="Search"
-        onChange={(e) => setSearchPattern(e.target.value)}
-      />
+      <SearchBar
+        sortingSchema={trickSortingSchemes}
+        dropdownHeader="Sort tricks"
+        searchPattern={searchPattern}
+        onFilter={value => setSearchPattern(value)}
+        onSort={schemeId => setSortOpt(schemeId)} />
       {searchResults.map(trick => {
         let isFirst = (sortingSchemes[sortOpt].attributeFunc(trick) !== current);
         current = sortingSchemes[sortOpt].attributeFunc(trick);

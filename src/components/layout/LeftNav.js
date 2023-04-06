@@ -1,17 +1,12 @@
 import { useLocation } from "react-router-dom";
 import { links } from "../../links";
-import { pages } from '../../services/enums';
 import { parentPageOf, parentPageMatches } from '../../services/parentPage';
-import Visibility from '../../components/containers/Visibility';
-import { trickSortingSchemes, comboSortingSchemes } from '../../services/sortingSchemes';
 import { Nav } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import LanguageSelector from "../buttons/LanguageSelector"
 
-const LeftNav = ({ sortOpt, setSortOpt, setShowAboutPage }) => {
+const LeftNav = ({ setShowAboutPage }) => {
   const path = useLocation().pathname.toString().toLowerCase();
-  const inTrickList = path === "/" ? true : false;
-  const inComboList = path === "/combos" ? true : false;
   const parentPage = parentPageOf(path);
 
   return (
@@ -29,33 +24,12 @@ const LeftNav = ({ sortOpt, setSortOpt, setShowAboutPage }) => {
           })
         }
       </Nav>
-      <Visibility visiblePages={[pages.TRICKLIST, pages.COMBOLIST]}>
-        <h6>{inTrickList && "Sort Tricks"}{inComboList && "Sort Combos"}</h6>
-        <hr />
-        <ul className="nav nav-pills flex-column mb-auto option-pills">
-          { inTrickList && trickSortingSchemes.map(scheme =>
-            <Nav.Item key={scheme.id}>
-              <Nav.Link
-                className={sortOpt === scheme.id ? "active" : "text-white"}
-                onClick={() => setSortOpt(scheme.id)}>
-                {scheme.name}
-              </Nav.Link>
-            </Nav.Item>)
-          }
-          { inComboList && comboSortingSchemes.map(scheme =>
-            <Nav.Item key={scheme.id}>
-              <Nav.Link
-                className={sortOpt === scheme.id ? "active" : "text-white"}
-                onClick={() => setSortOpt(scheme.id)}>
-                {scheme.name}
-              </Nav.Link>
-            </Nav.Item>)
-          }
-        </ul>
-      </Visibility>
       <hr />
       <LanguageSelector />
-      <a href="#" onClick={() => setShowAboutPage(true)} style={{marginTop: "1em"}}>About</a>
+      <div className="row mt-1">
+          <a className="col-8" href="https://forms.gle/Kg1Kydh8tqG4f7Vv8" target="_blank">Propose new trick</a>
+          <a className="col-4" href="#" onClick={() => setShowAboutPage(true)}>About</a>
+      </div>
     </div>
   );
 }

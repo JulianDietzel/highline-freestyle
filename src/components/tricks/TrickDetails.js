@@ -25,7 +25,9 @@ const TrickDetails = () => {
     const dbTrick = await db.getTrick(id);
     const resolvedRecommendations = [];
 
-    if (dbTrick.recommendedPrerequisites) {
+    if (!dbTrick || !dbTrick.id) return null;
+
+    if (dbTrick.recommendedPrerequisites && dbTrick.recommendedPrerequisites.map) {
       await Promise.all (dbTrick.recommendedPrerequisites.map (async recommendedId => {
         resolvedRecommendations.push(await db.getTrick(recommendedId));
       }));
@@ -35,6 +37,7 @@ const TrickDetails = () => {
     return dbTrick;
   }, [id]);
 
+  if (!trick) return <>Trick id: {id} not found in database</>;
 
   console.log(trick);
 
@@ -114,6 +117,13 @@ const TrickDetails = () => {
     });
   }
 
+  function TipList(props) {
+    const listItems = props.tips.map(tip =>
+      <li key={tip}>{tip}</li>
+    );
+    return (<ul className="callout">{listItems}</ul>);
+  }
+
   /**
    * Determine the color for the difficultyLevel badge. This is done by lerping between two colors.
    */
@@ -157,12 +167,47 @@ const TrickDetails = () => {
                 <EditButton className="align-top" call={editTrick}/>
               </div>
 
+            <div className="col-3" align="right">
+              <DeleteButton setShowDeleteWarning={setShowDeleteWarning}/>
+            </div>
+          </div>
+          {trick.alias && trick.technicalName &&
+            <div>
+              <h6>Technical Name: </h6>
+              <div className="callout">{trick.technicalName}</div>
+            </div>
+          }
               <div className="col-2 col-sm-1 col-md-1 my-0" align="right">
                 <DeleteButton setShowDeleteWarning={setShowDeleteWarning}/>
               </div>
             </div>
           </div>
 
+          {trick.startPos && trick.endPos &&
+            <div>
+              <div className="callout">from {trick.startPos} to {trick.endPos}</div>
+            </div>
+          }
+
+          {(trick.difficultyLevel >= 0) &&
+            <div>
+              <h6><Trans id="trickDetails.level">Level</Trans>: </h6>
+              <div className="callout">{trick.difficultyLevel}</div>
+            </div>
+          }
+
+          {trick.description &&
+            <div>
+              <h6>Description: </h6>
+              <div className="callout">{trick.description}</div>
+            </div>
+          }
+
+          {trick.tips && trick.tips.length > 0 &&
+            <div>
+              <h6>Tips: </h6>
+              <TipList tips={trick.tips} />
+            </div>
           <div className="row justify-content-start">
             {trick.startPos && trick.endPos &&
                 <div className="col-auto mt-0 mb-3 me-4">from {trick.startPos} to {trick.endPos}</div>
@@ -184,6 +229,10 @@ const TrickDetails = () => {
 
           {trick.yearEstablished && trick.establishedBy &&
               <p className="">Established by {trick.establishedBy} in {trick.yearEstablished}</p>
+            <div>
+              <h6>Established by: </h6>
+              <div className="callout">{trick.establishedBy} in {trick.yearEstablished}</div>
+            </div>
           }
 
           {youtubeId &&
@@ -229,6 +278,24 @@ const TrickDetails = () => {
                   }})}
                 </div>
               </div>
+            <div className="row">
+              <h6>Recommended Prerequisites:</h6>
+              {trick.recommendedPrerequisites.map(recommendedTrick => {
+              if(recommendedTrick){
+                return (
+                    <div key={recommendedTrick.id} className="trick-container col-12">
+                      <button className="btn preview-item skillFreq" freq={recommendedTrick.stickFrequency} onClick={() => {navigate(`/tricks/${recommendedTrick.id}`);}}>
+                        {recommendedTrick.alias || recommendedTrick.technicalName}
+                        {recommendedTrick.boostSkill && (
+                          <>
+                          <br/>
+                          <IoRocketSharp />
+                          </>)}
+                      </button>
+                    </div>
+                );
+              }})}
+            </div>
           }
 
           <hr className="my-3"/>
