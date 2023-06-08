@@ -11,11 +11,13 @@ import { IoRocketSharp } from 'react-icons/io5';
 
 import Database from "../../services/db";
 import VideoEmbed from "../misc/video/VideoEmbed";
+import ChangeRequestModal from "./ChangeRequestModal"
 import {BsCaretDownFill, BsCaretUpFill} from "react-icons/bs";
 const db = new Database();
 
 const TrickDetails = () => {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [showChangeRequestModal, setShowChangeRequestModal] = useState(false);
 
   const { id } = useParams();
 
@@ -76,7 +78,7 @@ const TrickDetails = () => {
 
   function RequestDifficultyLevelChangeButton() {
     return (
-      <button className="btn">
+      <button className="btn" onClick={() => setShowChangeRequestModal(true)}>
         <BsCaretUpFill/><BsCaretDownFill/>
       </button>
     );
@@ -112,15 +114,16 @@ const TrickDetails = () => {
 
           {(trick.difficultyLevel >= 0) &&
             <div>
-            <h6><Trans id="trickDetails.level">Level</Trans>: </h6>
-            <div className="d-flex flex-row justify-content-between">
-              <div className="callout w-100">{trick.difficultyLevel}</div>
-              <div className="align-self-center ms-2">
-                <RequestDifficultyLevelChangeButton></RequestDifficultyLevelChangeButton>
+              <h6><Trans id="trickDetails.level">Level</Trans>: </h6>
+              <div className="d-flex flex-row justify-content-between">
+                <div className="callout w-100">{trick.difficultyLevel}</div>
+                <div className="align-self-center ms-2">
+                  <RequestDifficultyLevelChangeButton></RequestDifficultyLevelChangeButton>
+                </div>
               </div>
             </div>
-            </div>
           }
+          <ChangeRequestModal show={showChangeRequestModal} setShow={setShowChangeRequestModal} trick={trick}/>
 
           {trick.description &&
             <div>
