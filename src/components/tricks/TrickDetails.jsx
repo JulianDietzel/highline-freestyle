@@ -11,6 +11,7 @@ import { IoRocketSharp } from 'react-icons/io5';
 
 import Database from "../../services/db";
 import VideoEmbed from "../misc/video/VideoEmbed";
+import {BsCaretDownFill, BsCaretUpFill} from "react-icons/bs";
 const db = new Database();
 
 const TrickDetails = () => {
@@ -73,6 +74,14 @@ const TrickDetails = () => {
     return (<ul className="callout">{listItems}</ul>);
   }
 
+  function RequestDifficultyLevelChangeButton() {
+    return (
+      <button className="btn">
+        <BsCaretUpFill/><BsCaretDownFill/>
+      </button>
+    );
+  }
+
   return (
     <div className="trick-details">
       {trick && (
@@ -103,8 +112,13 @@ const TrickDetails = () => {
 
           {(trick.difficultyLevel >= 0) &&
             <div>
-              <h6><Trans id="trickDetails.level">Level</Trans>: </h6>
-              <div className="callout">{trick.difficultyLevel}</div>
+            <h6><Trans id="trickDetails.level">Level</Trans>: </h6>
+            <div className="d-flex flex-row justify-content-between">
+              <div className="callout w-100">{trick.difficultyLevel}</div>
+              <div className="align-self-center ms-2">
+                <RequestDifficultyLevelChangeButton></RequestDifficultyLevelChangeButton>
+              </div>
+            </div>
             </div>
           }
 
